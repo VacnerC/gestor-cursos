@@ -1,0 +1,15 @@
+.navbar {
+    padding-left: 10%;
+    padding-right: 10%;
+
+}
+
+.container {
+    padding-left: 10%;
+    padding-right: 10%;
+}
+
+.container h1 {
+    border-bottom: 2px solid black;
+    padding-bottom: 2rem;
+}

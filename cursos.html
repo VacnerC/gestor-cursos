@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Cursos</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <link href="css/styles.css" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="index.html">Gestión de Cursos</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="btn btn-outline-primary me-2" href="agregar_cliente.html"><i class="bi bi-plus-circle"></i> Agregar Cliente</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="btn btn-outline-success me-2" href="cursos.html"><i class="bi bi-plus-circle"></i> Agregar Cursos</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="btn btn-outline-info me-2" href="agregar_asesor.html"><i class="bi bi-plus-circle"></i> Agregar Asesores</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="btn btn-outline-warning me-2" href="lista_clientes.html"><i class="bi bi-list"></i> Ver Clientes</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="btn btn-outline-danger" href="lista_asesores.html"><i class="bi bi-list"></i> Ver Asesores</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <h1>Gestión de Cursos</h1>
+
+        <!-- Formulario para agregar cursos -->
+        <h2>Agregar Nuevo Curso</h2>
+        <form id="form-agregar-curso" class="mb-4">
+            <div class="mb-3">
+                <label for="nombreCurso" class="form-label">Nombre del Curso</label>
+                <input type="text" class="form-control" id="nombreCurso" required>
+            </div>
+            <div class="mb-3">
+                <label for="costoCurso" class="form-label">Costo</label>
+                <input type="number" step="0.01" class="form-control" id="costoCurso" required>
+            </div>
+            <div class="mb-3">
+                <label for="categoriaCurso" class="form-label">Categoría</label>
+                <input type="text" class="form-control" id="categoriaCurso" required>
+            </div>
+            <div class="mb-3">
+                <label for="imageUrlCurso" class="form-label">URL de la Imagen</label>
+                <input type="url" class="form-control" id="imageUrlCurso">
+            </div>
+            <div class="mb-3">
+                <label for="descripcionCurso" class="form-label">Descripción</label>
+                <textarea class="form-control" id="descripcionCurso" rows="3"></textarea>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Vista Previa:</label>
+                <img id="imagePreview" src="#" alt="Vista previa de la imagen" style="max-width: 200px; max-height: 200px; display: block; margin-top: 10px;">
+            </div>
+            <button type="submit" class="btn btn-primary">Guardar Curso</button>
+        </form>
+
+        <!-- Tabla de cursos -->
+        <h2>Lista de Cursos</h2>
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Nombre</th>
+                    <th>Costo</th>
+                    <th>Categoría</th>
+                    <th>Descripción</th>
+                    <th>Imagen URL</th>
+                    <th>Acciones</th>
+                    <th>Clientes</th>
+                </tr>
+            </thead>
+            <tbody id="cursos-tbody">
+                <!-- Filas de cursos se cargarán dinámicamente aquí -->
+            </tbody>
+        </table>
+
+    </div>
+
+    <!-- Bootstrap Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/db.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            loadCursos();
+
+            // Event listener para actualizar la vista previa de la imagen
+            const imageUrlInput = document.getElementById('imageUrlCurso');
+            const imagePreview = document.getElementById('imagePreview');
+            imageUrlInput.addEventListener('input', () => {
+                const url = imageUrlInput.value;
+                if (url) {
+                    imagePreview.src = url;
+                    imagePreview.style.display = 'block'; // Mostrar la imagen
+                } else {
+                    imagePreview.src = '#'; // Limpiar si no hay URL
+                    imagePreview.style.display = 'none'; // Ocultar si no hay URL
+                }
+            });
+            // Ocultar inicialmente si no hay URL (al cargar la página)
+            if (!imageUrlInput.value) {
+                 imagePreview.style.display = 'none';
+            }
+
+
+            // Event listener para el formulario de agregar curso
+            document.getElementById('form-agregar-curso').addEventListener('submit', async (event) => {
+                event.preventDefault();
+
+                const nombre = document.getElementById('nombreCurso').value;
+                const costo = parseFloat(document.getElementById('costoCurso').value);
+                const categoria = document.getElementById('categoriaCurso').value;
+                const imageUrl = document.getElementById('imageUrlCurso').value; // Obtener la URL de la imagen
+                const descripcion = document.getElementById('descripcionCurso').value;
+
+                const form = document.getElementById('form-agregar-curso');
+                const editingId = form.dataset.editingId;
+
+                const cursoData = {
+                    nombre: nombre,
+                    costo: costo,
+                    categoria: categoria,
+                    descripcion: descripcion,
+                    imageUrl: imageUrl
+                };
+
+                try {
+                    await openDb();
+                    if (editingId) {
+                        // Actualizar curso existente
+                        cursoData.id = parseInt(editingId);
+                        await updateCurso(cursoData);
+                        alert('Curso actualizado exitosamente!');
+                        delete form.dataset.editingId;
+                        form.querySelector('button[type="submit"]').textContent = 'Guardar Curso';
+                    } else {
+                        // Crear nuevo curso
+                        const idGenerado = await addCurso(cursoData);
+                        console.log(`Curso agregado con ID: ${idGenerado}`);
+                        alert('Curso agregado exitosamente!');
+                    }
+                    form.reset();
+                    document.getElementById('imagePreview').src = '#'; // Limpiar vista previa
+                    document.getElementById('imagePreview').style.display = 'none'; // Ocultar vista previa
+                    loadCursos(); // Recargar la lista
+                } catch (error) {
+                    console.error('Error al guardar curso:', error);
+                    alert('Error al guardar el curso.');
+                }
+            });
+        });
+
+        async function loadCursos() {
+            try {
+                await openDb();
+                const cursos = await getAllCursos();
+                const tbody = document.getElementById('cursos-tbody');
+                tbody.innerHTML = '';
+
+                if (cursos.length === 0) {
+                    // Ajustar colspan a 7 por la nueva columna de Descripción
+                    tbody.innerHTML = '<tr><td colspan="7" class="text-center">No hay cursos registrados.</td></tr>';
+                    return;
+                }
+
+                cursos.forEach(curso => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${curso.id}</td>
+                        <td>${curso.nombre}</td>
+                        <td>${curso.costo}</td>
+                        <td>${curso.categoria}</td>
+                        <td>${curso.descripcion || 'N/A'}</td>
+                        <td>${curso.imageUrl ? `<a href="${curso.imageUrl}" target="_blank">Ver Imagen</a>` : 'N/A'}</td>
+                        <td>
+                            <button class="btn btn-warning btn-sm btn-edit" data-id="${curso.id}">Editar</button>
+                            <button class="btn btn-danger btn-sm btn-delete" data-id="${curso.id}">Eliminar</button>
+                        </td>
+                        <td>
+                            <button class="btn btn-info btn-sm btn-clientes" data-id="${curso.id}">Ver Clientes</button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+
+                // Event listeners para botones de eliminar
+                document.querySelectorAll('.btn-delete').forEach(button => {
+                    button.addEventListener('click', async (event) => {
+                        const id = parseInt(event.target.getAttribute('data-id'));
+                        if (confirm(`¿Estás seguro de que deseas eliminar el curso con ID ${id}?`)) {
+                            try {
+                                await deleteCurso(id);
+                                console.log(`Curso con ID ${id} eliminado.`);
+                                loadCursos(); // Recargar
+                            } catch (error) {
+                                console.error('Error al eliminar curso:', error);
+                                alert('Error al eliminar el curso.');
+                            }
+                        }
+                    });
+                });
+
+                // Event listeners para botones de editar
+                document.querySelectorAll('.btn-edit').forEach(button => {
+                    button.addEventListener('click', async (event) => {
+                        const id = parseInt(event.target.getAttribute('data-id'));
+                        try {
+                            // Obtener el curso a editar
+                            const transaction = db.transaction(['cursos'], 'readonly');
+                            const store = transaction.objectStore('cursos');
+                            const request = store.get(id);
+                            
+                            request.onsuccess = (event) => {
+                                const curso = event.target.result;
+                                if (curso) {
+                                    // Llenar el formulario con los datos del curso
+                                    document.getElementById('nombreCurso').value = curso.nombre;
+                                    document.getElementById('costoCurso').value = curso.costo;
+                                    document.getElementById('categoriaCurso').value = curso.categoria;
+                                    document.getElementById('descripcionCurso').value = curso.descripcion || '';
+                                    document.getElementById('imageUrlCurso').value = curso.imageUrl || '';
+                                    
+                                    // Actualizar vista previa de imagen
+                                    const imagePreview = document.getElementById('imagePreview');
+                                    if (curso.imageUrl) {
+                                        imagePreview.src = curso.imageUrl;
+                                        imagePreview.style.display = 'block';
+                                    } else {
+                                        imagePreview.src = '#';
+                                        imagePreview.style.display = 'none';
+                                    }
+                                    
+                                    // Cambiar el comportamiento del formulario para actualizar en lugar de crear
+                                    const form = document.getElementById('form-agregar-curso');
+                                    const submitButton = form.querySelector('button[type="submit"]');
+                                    submitButton.textContent = 'Actualizar Curso';
+                                    
+                                    // Guardar el ID del curso que se está editando
+                                    form.dataset.editingId = id;
+                                    
+                                    // Desplazarse al formulario
+                                    form.scrollIntoView({ behavior: 'smooth' });
+                                } else {
+                                    console.error('No se encontró el curso con ID:', id);
+                                    alert('No se encontró el curso a editar.');
+                                }
+                            };
+                            
+                            request.onerror = (event) => {
+                                console.error('Error al obtener curso:', event.target.error);
+                                alert('Error al obtener el curso para editar.');
+                            };
+                        } catch (error) {
+                            console.error('Error al preparar edición:', error);
+                            alert('Error al preparar la edición del curso.');
+                        }
+                    });
+                });
+                
+                // Botones para ver clientes de un curso
+                document.querySelectorAll('.btn-clientes').forEach(button => {
+                    button.addEventListener('click', async (event) => {
+                        const cursoId = parseInt(event.target.getAttribute('data-id'));
+                        await openDb();
+                        const clientes = await getAllClientes();
+                        const clientesCurso = clientes.filter(c => c.cursoId === cursoId);
+                        // Crear modal dinámicamente
+                        let modal = document.getElementById('clientesCursoModal');
+                        if (!modal) {
+                            modal = document.createElement('div');
+                            modal.className = 'modal fade';
+                            modal.id = 'clientesCursoModal';
+                            modal.setAttribute('tabindex', '-1');
+                            modal.setAttribute('aria-labelledby', 'clientesCursoModalLabel');
+                            modal.setAttribute('aria-hidden', 'true');
+                            modal.innerHTML = `
+                                <div class="modal-dialog modal-lg">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title" id="clientesCursoModalLabel">Clientes del Curso</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <ul id="lista-clientes-curso" class="list-group"></ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                            document.body.appendChild(modal);
+                        }
+                        const lista = modal.querySelector('#lista-clientes-curso');
+                        lista.innerHTML = '';
+                        if (clientesCurso.length === 0) {
+                            lista.innerHTML = '<li class="list-group-item">No hay clientes inscritos en este curso.</li>';
+                        } else {
+                            clientesCurso.forEach(cliente => {
+                                const li = document.createElement('li');
+                                li.className = 'list-group-item';
+                                li.textContent = cliente.nombre;
+                                lista.appendChild(li);
+                            });
+                        }
+                        const modalInstance = new bootstrap.Modal(modal);
+                        modalInstance.show();
+                        // Eliminar el modal del DOM cuando se cierre
+                        modal.addEventListener('hidden.bs.modal', function () {
+                            document.body.removeChild(modal);
+                        }, { once: true });
+                    });
+                });
+                
+                // Modificar el event listener del formulario para manejar tanto creación como actualización
+                const form = document.getElementById('form-agregar-curso');
+                form.removeEventListener('submit', null); // Remover listeners previos si existen
+
+            } catch (error) {
+                console.error('Error al cargar cursos:', error);
+                const tbody = document.getElementById('cursos-tbody');
+                // Ajustar colspan a 6
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center">Error al cargar los cursos.</td></tr>';
+            }
+        }
+    </script>
+</body>
+</html>

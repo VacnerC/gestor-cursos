@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agregar Cliente</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <link href="css/styles.css" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="index.html">Gestión de Cursos</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="btn btn-outline-primary me-2" href="agregar_cliente.html"><i class="bi bi-plus-circle"></i> Agregar Cliente</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="btn btn-outline-success me-2" href="cursos.html"><i class="bi bi-plus-circle"></i> Agregar Cursos</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="btn btn-outline-info me-2" href="agregar_asesor.html"><i class="bi bi-plus-circle"></i> Agregar Asesores</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="btn btn-outline-warning me-2" href="lista_clientes.html"><i class="bi bi-list"></i> Ver Clientes</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="btn btn-outline-danger" href="lista_asesores.html"><i class="bi bi-list"></i> Ver Asesores</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <h1>Agregar Nuevo Cliente</h1>
+        <form id="form-agregar-cliente">
+            <div class="mb-3">
+                <label for="nombre" class="form-label">Nombre</label>
+                <input type="text" class="form-control" id="nombre" required>
+            </div>
+            <div class="mb-3">
+                <label for="curso" class="form-label">Curso</label>
+                <select class="form-select" id="curso" required>
+                    <option value="" selected disabled>Selecciona un curso...</option>
+                    <!-- Opciones de curso se cargarán aquí -->
+                </select>
+            </div>
+            <div class="mb-3">
+                <label for="pago" class="form-label">Pago</label>
+                <div class="input-group">
+                    <input type="text" class="form-control" id="pago" required>
+                    <span class="input-group-text" id="costo-curso">Costo: $0.00</span>
+                </div>
+            </div>
+            <div class="mb-3">
+                <label for="asesor" class="form-label">Asesor</label>
+                <select class="form-select" id="asesor" required>
+                    <option value="" selected disabled>Selecciona un asesor...</option>
+                    <!-- Opciones de asesor se cargarán aquí -->
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary">Guardar Cliente</button>
+        </form>
+    </div>
+
+    <!-- Bootstrap Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/db.js"></script>
+    <script>
+        let cursosDisponibles = []; // Para almacenar los cursos con sus costos
+
+        async function cargarCursos() {
+            try {
+                await openDb();
+                cursosDisponibles = await getAllCursos();
+                const cursoSelect = document.getElementById('curso');
+                cursoSelect.innerHTML = '<option value="" selected disabled>Selecciona un curso...</option>'; // Limpiar y añadir opción por defecto
+                cursosDisponibles.forEach(curso => {
+                    const option = document.createElement('option');
+                    option.value = curso.id; // Usar ID como valor
+                    option.textContent = curso.nombre;
+                    option.dataset.costo = curso.costo; // Guardar costo en data attribute
+                    cursoSelect.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error al cargar cursos:', error);
+                alert('No se pudieron cargar los cursos.');
+            }
+        }
+
+        async function cargarAsesores() {
+            try {
+                await openDb();
+                const asesores = await getAllAsesores();
+                const asesorSelect = document.getElementById('asesor');
+                asesorSelect.innerHTML = '<option value="" selected disabled>Selecciona un asesor...</option>'; // Limpiar y añadir opción por defecto
+                asesores.forEach(asesor => {
+                    const option = document.createElement('option');
+                    option.value = asesor.id; // Usar ID como valor
+                    option.textContent = asesor.nombre;
+                    asesorSelect.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error al cargar asesores:', error);
+                alert('No se pudieron cargar los asesores.');
+            }
+        }
+
+        function actualizarCostoCurso() {
+            const cursoSelect = document.getElementById('curso');
+            const selectedOption = cursoSelect.options[cursoSelect.selectedIndex];
+            const costoSpan = document.getElementById('costo-curso');
+            const pagoInput = document.getElementById('pago');
+            if (selectedOption && selectedOption.value) {
+                const costo = parseFloat(selectedOption.dataset.costo).toFixed(2);
+                costoSpan.textContent = `Costo: $${costo}`;
+                pagoInput.value = costo; // Autocompletar el campo de pago
+            } else {
+                costoSpan.textContent = 'Costo: $0.00';
+                pagoInput.value = ''; // Limpiar si no hay curso seleccionado
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            cargarCursos();
+            cargarAsesores();
+            document.getElementById('curso').addEventListener('change', actualizarCostoCurso);
+        });
+
+        document.getElementById('form-agregar-cliente').addEventListener('submit', async (event) => {
+            event.preventDefault(); // Evitar el envío tradicional
+
+            const nombre = document.getElementById('nombre').value;
+            const cursoSelect = document.getElementById('curso');
+            const cursoId = cursoSelect.value;
+            const cursoNombre = cursoSelect.options[cursoSelect.selectedIndex].text;
+            const pago = document.getElementById('pago').value;
+            const asesorSelect = document.getElementById('asesor');
+            const asesorId = asesorSelect.value;
+            const asesorNombre = asesorSelect.options[asesorSelect.selectedIndex].text;
+
+            // Validar que se hayan seleccionado curso y asesor
+            if (!cursoId) {
+                alert('Por favor, selecciona un curso.');
+                return;
+            }
+            if (!asesorId) {
+                alert('Por favor, selecciona un asesor.');
+                return;
+            }
+
+            const nuevoCliente = {
+                nombre: nombre,
+                cursoId: parseInt(cursoId), // Guardar ID del curso
+                cursoNombre: cursoNombre, // Guardar nombre para fácil visualización
+                pago: pago,
+                asesorId: parseInt(asesorId), // Guardar ID del asesor
+                asesorNombre: asesorNombre // Guardar nombre para fácil visualización
+            };
+
+            try {
+                await openDb(); // Asegurarse que la BD esté abierta
+                const idGenerado = await addCliente(nuevoCliente);
+                console.log(`Cliente agregado con ID: ${idGenerado}`);
+                alert('Cliente agregado exitosamente!');
+                // Limpiar el formulario
+                document.getElementById('form-agregar-cliente').reset();
+                actualizarCostoCurso(); // Resetear el costo mostrado
+                // Opcional: Redirigir a la lista de clientes
+                // window.location.href = 'lista_clientes.html';
+            } catch (error) {
+                console.error('Error al agregar cliente:', error);
+                alert('Error al agregar el cliente. Por favor, inténtalo de nuevo.');
+            }
+        });
+    </script>
+</body>
+</html>
